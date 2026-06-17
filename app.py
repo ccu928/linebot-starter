@@ -96,6 +96,17 @@ def extract_text(filepath, file_type):
                 text += p.text + "\n"
 
             return text
+        # 圖片 OCR
+        elif file_type == "image":
+
+            img = Image.open(filepath)
+
+            text = pytesseract.image_to_string(
+                img,
+                lang="chi_tra+eng"
+            )
+
+            return text
 
 
         return ""
