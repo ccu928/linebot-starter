@@ -375,7 +375,7 @@ def handle_image(event):
     quiz = generate_quiz(text)
     quiz_data = json.loads(quiz)
     def create_quiz_flex(questions):
-    bubbles = []
+        bubbles = []
     # ===== 每一題一張卡 =====
 
     for i, q in enumerate(questions):
