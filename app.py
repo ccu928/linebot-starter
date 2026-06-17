@@ -235,9 +235,9 @@ def handle_image(event):
         file_id
     )
     filepath="image.jpg"
-    with open(filepath,"wb") as f:
-        for chunk in content.iter_content():
-            f.write(chunk)
+  with open(filepath, "wb") as f:
+    for chunk in content.iter_content():
+        f.write(chunk)
     text = extract_text(
         filepath,
         "image"
