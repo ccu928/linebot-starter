@@ -1,6 +1,6 @@
 import os
 import json
-import datetime
+from datetime import timedelta
 import traceback
 import fitz
 from docx import Document
@@ -48,7 +48,12 @@ def log_to_sheets(user_msg, bot_reply):
         service = get_sheets_service()
         if not service:
             return
-        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        now = (
+            datetime.datetime.utcnow()
+            + timedelta(hours=8)
+        ).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
         values = [[now, user_msg, bot_reply]]
         service.spreadsheets().values().append(
             spreadsheetId=SPREADSHEET_ID,
