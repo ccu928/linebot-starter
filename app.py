@@ -198,7 +198,7 @@ def handle_message(event):
 
         quiz = generate_quiz(user_msg)
         log_to_sheets(
-            user_msg,
+            text,
             quiz
         )
 
