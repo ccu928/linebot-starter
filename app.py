@@ -180,25 +180,41 @@ def webhook():
 # LINE文字訊息
 # ==========================
 
-@handler.add( MessageEvent,message=TextMessage)
+@handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+
     user_msg = event.message.text
+
     try:
-        reply = generate_quiz(user_msg)
+
+        quiz = generate_quiz(user_msg)
+
+        # 去掉 Gemini 可能加的 ```json
+        quiz = quiz.replace("```json", "")
+        quiz = quiz.replace("```", "")
+        quiz = quiz.strip()
+
+        quiz_data = json.loads(quiz)
+
+        flex_msg = create_quiz_flex(
+            quiz_data["questions"]
+        )
+
+        line_bot_api.reply_message(
+            event.reply_token,
+            flex_msg
+        )
+
     except Exception as e:
 
-        print(
-            f"Gemini error:{e}"
+        print(f"Gemini error:{e}")
+
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(
+                text=f"AI錯誤：{str(e)}"
+            )
         )
-        reply = ("AI錯誤：" + str(e))
-
-    log_to_sheets(user_msg, reply)
-
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=reply[:4500])
-    )
-
 #Flex Message 呈現#
 def create_quiz_flex(questions):
 
