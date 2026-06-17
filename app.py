@@ -13,6 +13,9 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage, FileMessa
 from google import genai
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
+from linebot.models import (
+    FlexSendMessage
+)
 
 app = Flask(__name__)
 
@@ -115,6 +118,8 @@ def extract_text(filepath, file_type):
         )
 
         return ""
+
+        
 # =================================
 # AI產生測驗題
 # =================================
@@ -122,28 +127,37 @@ def extract_text(filepath, file_type):
 def generate_quiz(text):
 
     prompt = f"""
-
-你是一位教師。
-
-請根據以下教材：
-
-{text}
-
-
-產生：
-
-【選擇題】
-5題
-每題四個選項
-標示答案
-
-
-【是非題】
-3題
-附答案
-
-
-"""
+    你是一位大學教師。
+    
+    請根據教材產生：
+    
+    5題選擇題
+    
+    請只輸出JSON。
+    
+    格式：
+    
+    {{
+      "questions":[
+        {{
+          "question":"題目",
+          "A":"選項A",
+          "B":"選項B",
+          "C":"選項C",
+          "D":"選項D",
+          "answer":"A"
+        }}
+      ]
+    }}
+    
+    不要輸出markdown
+    不要輸出教材內容
+    不要輸出解釋
+    
+    教材：
+    
+    {text}
+    """
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
@@ -184,6 +198,101 @@ def handle_message(event):
         event.reply_token,
         TextSendMessage(text=reply[:4500])
     )
+
+#Flex Message 呈現#
+def create_quiz_flex(questions):
+
+    contents = []
+
+    contents.append({
+        "type": "text",
+        "text": "📚 AI測驗",
+        "weight": "bold",
+        "size": "xl"
+    })
+
+    for idx, q in enumerate(questions):
+
+        contents.extend([
+
+            {
+                "type":"separator",
+                "margin":"lg"
+            },
+
+            {
+                "type":"text",
+                "text":f"Q{idx+1}. {q['question']}",
+                "wrap":True,
+                "weight":"bold",
+                "margin":"md"
+            },
+
+            {
+                "type":"text",
+                "text":f"🅰 {q['A']}",
+                "wrap":True
+            },
+
+            {
+                "type":"text",
+                "text":f"🅱 {q['B']}",
+                "wrap":True
+            },
+
+            {
+                "type":"text",
+                "text":f"🅲 {q['C']}",
+                "wrap":True
+            },
+
+            {
+                "type":"text",
+                "text":f"🅳 {q['D']}",
+                "wrap":True
+            }
+        ])
+
+        answers = []
+        
+        for i,q in enumerate(questions):
+        
+            answers.append(
+                f"{i+1}. {q['answer']}"
+            )
+        
+        contents.extend([
+        
+            {
+                "type":"separator",
+                "margin":"xl"
+            },
+        
+            {
+                "type":"text",
+                "text":"📖 參考答案",
+                "weight":"bold",
+                "margin":"lg"
+            },
+        
+            {
+                "type":"text",
+                "text":"\n".join(answers),
+                "wrap":True
+            }
+        ])
+        return FlexSendMessage(
+            alt_text="AI測驗",
+            contents={
+                "type":"bubble",
+                "size":"giga",
+                "body":{
+                    "type":"box",
+                    "layout":"vertical",
+                    "contents":contents
+                }
+            }
+        )
 
 
 # ==========================
@@ -248,9 +357,14 @@ def handle_image(event):
         "image"
     )
     quiz = generate_quiz(text)
+    quiz_data = json.loads(quiz)
+
+    flex_msg = create_quiz_flex(
+        quiz_data["questions"]
+    )
+    
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(
-            text=quiz[:4500]
-        )
+        flex_msg
+    )
     )
