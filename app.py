@@ -374,12 +374,115 @@ def handle_image(event):
     )
     quiz = generate_quiz(text)
     quiz_data = json.loads(quiz)
+    def create_quiz_flex(questions):
+    bubbles = []
+    # ===== 每一題一張卡 =====
 
-    flex_msg = create_quiz_flex(
-        quiz_data["questions"]
-    )
-    
-    line_bot_api.reply_message(
-        event.reply_token,
-        flex_msg
+    for i, q in enumerate(questions):
+        bubble = {
+            "type": "bubble",
+            "size": "mega",
+            "body": {
+
+                "type": "box",
+
+                "layout": "vertical",
+
+                "contents": [
+
+                    {
+                        "type": "text",
+                        "text": f"📚 第 {i+1} 題",
+                        "weight": "bold",
+                        "size": "xl"
+                    },
+
+                    {
+                        "type": "separator",
+                        "margin": "md"
+                    },
+
+                    {
+                        "type": "text",
+                        "text": q["question"],
+                        "wrap": True,
+                        "margin": "md",
+                        "weight": "bold"
+                    },
+
+
+                    {
+                        "type": "text",
+                        "text": f"🅰 {q['A']}",
+                        "wrap": True,
+                        "margin": "md"
+                    },
+
+                    {
+                        "type": "text",
+                        "text": f"🅱 {q['B']}",
+                        "wrap": True
+                    },
+
+                    {
+                        "type": "text",
+                        "text": f"🅲 {q['C']}",
+                        "wrap": True
+                    },
+
+                    {
+                        "type": "text",
+                        "text": f"🅳 {q['D']}",
+                        "wrap": True
+                    }
+
+                ]
+            }
+        }
+        bubbles.append(bubble)
+    # ===== 最後答案卡 =====
+    answers = []
+    for i, q in enumerate(questions):
+        answers.append(
+            f"{i+1}. {q['answer']}"
+        )
+    answer_bubble = {
+        "type":"bubble",
+        "size":"mega",
+        "body":{
+            "type":"box",
+            "layout":"vertical",
+            "contents":[
+                {
+                    "type":"text",
+                    "text":"📖 參考答案",
+                    "weight":"bold",
+                    "size":"xl"
+                },
+
+                {
+                    "type":"separator",
+                    "margin":"md"
+                },
+
+                {
+                    "type":"text",
+                    "text":"\n".join(answers),
+                    "wrap":True,
+                    "margin":"md"
+                }
+
+            ]
+        }
+    }
+
+    bubbles.append(answer_bubble)
+    # ===== Carousel =====
+
+    return FlexSendMessage(
+        alt_text="AI測驗",
+        contents={
+            "type":"carousel",
+            "contents": bubbles
+        }
     )
