@@ -201,8 +201,8 @@ def handle_file(event):
         filepath,
         "wb"
     ) as f:
-    for chunk in content.iter_content():
-        f.write(chunk)
+        for chunk in content.iter_content():
+            f.write(chunk)
     if filename.endswith(".pdf"):
         file_type = "pdf"
     elif filename.endswith(".docx"):
