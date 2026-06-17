@@ -391,46 +391,27 @@ def handle_file(event):
   
 @handler.add(MessageEvent, message=ImageMessage)
     def handle_image(event):
-    
         file_id = event.message.id
-    
         content = line_bot_api.get_message_content(
             file_id
         )
-    
         filepath="image.jpg"
-    
-    
         with open(filepath,"wb") as f:
-    
             for chunk in content.iter_content():
-    
                 f.write(chunk)
-    
-    
         text = extract_text(
             filepath,
             "image"
         )
-    
-    
         quiz = generate_quiz(text)
-    
-    
         quiz = quiz.replace("
     json","") quiz = quiz.replace("
     ","")
         quiz = quiz.strip()
-    
-    
         quiz_data = json.loads(quiz)
-    
-    
         flex_msg = create_quiz_flex(
             quiz_data["questions"]
         )
-    
-    
         line_bot_api.reply_message(
             event.reply_token,
             flex_msg
