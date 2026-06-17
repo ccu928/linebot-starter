@@ -363,11 +363,7 @@ def handle_file(event):
     )
     
     quiz = generate_quiz(text)
-    log_to_sheets(
-        user_msg,
-        quiz
-    )
-    
+
     quiz = quiz.replace(
         "```json",
         ""
