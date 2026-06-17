@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import traceback
 import fitz
 from docx import Document
+from PIL import Image
 import pytesseract
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
