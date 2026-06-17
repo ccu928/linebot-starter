@@ -162,61 +162,54 @@ def webhook():
         abort(400)
     return 'OK'
 
-@handler.add(MessageEvent, message=TextMessage)
+# ==========================
+# LINE文字訊息
+# ==========================
+
+@handler.add( MessageEvent,message=TextMessage)
 def handle_message(event):
     user_msg = event.message.text
-     # 直接輸入文字也可以出題
-    quiz = generate_quiz(user_msg)
-
-
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(
-            text=quiz
-        )
     try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=user_msg
-        )
-        reply = response.text
+        reply = generate_quiz(user_msg)
     except Exception as e:
-        print(f'Gemini error: {e}')
-        reply = f'錯誤：{str(e)}'
+
+        print(
+            f"Gemini error:{e}"
+        )
+        reply = ("AI錯誤：" + str(e))
+
     log_to_sheets(user_msg, reply)
+
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=reply)
+        TextSendMessage(text=reply[:4500])
     )
 
-if __name__ == "__main__":
-    app.run()
 
-@handler.add(MessageEvent, message=FileMessage)
+# ==========================
+# LINE檔案(PDF / Word)
+# ==========================
+
+@handler.add(MessageEvent,message=FileMessage)
 def handle_file(event):
-
     file_id = event.message.id
     filename = event.message.file_name
-
-    content = line_bot_api.get_message_content(
-        file_id
-    )
-
+    content = line_bot_api.get_message_content(file_id)
     filepath = filename
 
-    with open(filepath,"wb") as f:
+    with open(filepath,"wb") 
+    as f:
         for chunk in content.iter_content():
             f.write(chunk)
-    # 判斷格式
     if filename.endswith(".pdf"):
-        file_type="pdf"
+        file_type = "pdf"
     elif filename.endswith(".docx"):
-        file_type="docx"
+        file_type = "docx"
     else:
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(
-                text="目前只支援 PDF / Word"
+                text="只支援 PDF 或 Word"
             )
         )
         return
@@ -224,16 +217,16 @@ def handle_file(event):
         filepath,
         file_type
     )
-    quiz = generate_quiz(text)
-
+    quiz = generate_quiz(
+        text
+    )
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(
             text=quiz[:4500]
         )
     )
-            )
-        )
+
 
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
