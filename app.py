@@ -3,10 +3,13 @@ import json
 import datetime
 import traceback
 import fitz
+from docx import Document
+from PIL import Image
+import pytesseract
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, FileMessage
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, FileMessage, ImageMessage
 from google import genai
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
@@ -55,49 +58,91 @@ def log_to_sheets(user_msg, bot_reply):
         print(f'記錄失敗: {e}')
         traceback.print_exc()
 
-# ==========================
-# 讀取 PDF 文字內容
-# ==========================
-def read_pdf(filepath):
+# =================================
+# 不同格式轉文字
+# =================================
+
+def extract_text(filepath, file_type):
+
     try:
-        doc = fitz.open(filepath)
 
-        text = ""
+        # PDF
+        if file_type == "pdf":
 
-        for page in doc:
-            text += page.get_text()
+            doc = fitz.open(filepath)
 
-        return text
+            text = ""
 
-    except Exception as e:
-        print(f"PDF讀取錯誤: {e}")
+            for page in doc:
+                text += page.get_text()
+
+            return text
+
+
+        # Word
+        elif file_type == "docx":
+
+            doc = Document(filepath)
+
+            text = ""
+
+            for p in doc.paragraphs:
+                text += p.text + "\n"
+
+            return text
+
+
+        # 圖片OCR
+        elif file_type == "image":
+
+            img = Image.open(filepath)
+
+            text = pytesseract.image_to_string(
+                img,
+                lang="chi_tra+eng"
+            )
+
+            return text
+
+
         return ""
 
-# ==========================
-# Gemini 產生測驗題
-# ==========================
-def generate_quiz(note_text):
+
+    except Exception as e:
+
+        print(
+            f"文字解析錯誤:{e}"
+        )
+
+        return ""
+# =================================
+# AI產生測驗題
+# =================================
+
+def generate_quiz(text):
 
     prompt = f"""
-你是一位專業教師。
 
-請根據以下教材內容：
+你是一位教師。
+
+請根據以下教材：
+
+{text}
+
 
 產生：
 
 【選擇題】
-5題單選題
-每題4個選項
-標示正確答案
+5題
+每題四個選項
+標示答案
+
 
 【是非題】
 3題
+附答案
 
-請直接輸出題目。
 
-教材內容：
-
-{note_text}
 """
 
     response = client.models.generate_content(
@@ -120,6 +165,15 @@ def webhook():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_msg = event.message.text
+     # 直接輸入文字也可以出題
+    quiz = generate_quiz(user_msg)
+
+
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(
+            text=quiz
+        )
     try:
         response = client.models.generate_content(
             model='gemini-2.5-flash',
@@ -138,88 +192,67 @@ def handle_message(event):
 if __name__ == "__main__":
     app.run()
 
-# ==========================
-# 接收PDF檔案
-# ==========================
 @handler.add(MessageEvent, message=FileMessage)
 def handle_file(event):
 
-    try:
+    file_id = event.message.id
+    filename = event.message.file_name
 
-        file_id = event.message.id
+    content = line_bot_api.get_message_content(
+        file_id
+    )
 
-        file_name = event.message.file_name
+    filepath = filename
 
-        # 只接受PDF
-        if not file_name.lower().endswith(".pdf"):
-
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(
-                    text="目前僅支援 PDF 檔案上傳"
-                )
-            )
-
-            return
-
-        # 下載檔案
-        message_content = line_bot_api.get_message_content(
-            file_id
-        )
-
-        filepath = f"upload_{file_id}.pdf"
-
-        with open(filepath, "wb") as fd:
-
-            for chunk in message_content.iter_content():
-                fd.write(chunk)
-
-        print(f"檔案已下載: {filepath}")
-
-        # 讀取PDF內容
-        pdf_text = read_pdf(filepath)
-
-        if not pdf_text.strip():
-
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(
-                    text="無法讀取PDF內容"
-                )
-            )
-
-            return
-
-        # 產生測驗題
-        quiz = generate_quiz(pdf_text)
-
-        # 記錄到 Google Sheets
-        log_to_sheets(
-            f"PDF:{file_name}",
-            quiz[:1000]
-        )
-
-        # LINE訊息長度限制
-        if len(quiz) > 4500:
-            quiz = quiz[:4500] + "\n\n(內容過長已截斷)"
-
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=quiz)
-        )
-
-        # 刪除暫存檔
-        if os.path.exists(filepath):
-            os.remove(filepath)
-
-    except Exception as e:
-
-        print(f"檔案處理錯誤: {e}")
-        traceback.print_exc()
-
+    with open(filepath,"wb") as f:
+        for chunk in content.iter_content():
+            f.write(chunk)
+    # 判斷格式
+    if filename.endswith(".pdf"):
+        file_type="pdf"
+    elif filename.endswith(".docx"):
+        file_type="docx"
+    else:
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(
-                text=f"檔案處理失敗：{str(e)}"
+                text="目前只支援 PDF / Word"
             )
         )
+        return
+    text = extract_text(
+        filepath,
+        file_type
+    )
+    quiz = generate_quiz(text)
+
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(
+            text=quiz[:4500]
+        )
+    )
+            )
+        )
+
+@handler.add(MessageEvent, message=ImageMessage)
+def handle_image(event):
+    file_id = event.message.id
+    content = line_bot_api.get_message_content(
+        file_id
+    )
+    filepath="image.jpg"
+    with open(filepath,"wb") as f:
+        for chunk in content.iter_content():
+            f.write(chunk)
+    text = extract_text(
+        filepath,
+        "image"
+    )
+    quiz = generate_quiz(text)
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(
+            text=quiz[:4500]
+        )
+    )
