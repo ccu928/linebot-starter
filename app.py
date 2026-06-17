@@ -197,10 +197,12 @@ def handle_file(event):
     content = line_bot_api.get_message_content(file_id)
     filepath = filename
 
-    with open(filepath,"wb") 
-    as f:
-        for chunk in content.iter_content():
-            f.write(chunk)
+    with open(
+        filepath,
+        "wb"
+    ) as f:
+    for chunk in content.iter_content():
+        f.write(chunk)
     if filename.endswith(".pdf"):
         file_type = "pdf"
     elif filename.endswith(".docx"):
