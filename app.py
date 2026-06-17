@@ -367,14 +367,32 @@ def handle_file(event):
         filepath,
         file_type
     )
-    quiz = generate_quiz(
-        text
+    
+    quiz = generate_quiz(text)
+    
+    quiz = quiz.replace(
+        "```json",
+        ""
     )
+    
+    quiz = quiz.replace(
+        "```",
+        ""
+    )
+    
+    quiz = quiz.strip()
+    
+    quiz_data = json.loads(
+        quiz
+    )
+    
+    flex_msg = create_quiz_flex(
+        quiz_data["questions"]
+    )
+    
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(
-            text=quiz[:4500]
-        )
+        flex_msg
     )
 
 
