@@ -367,4 +367,3 @@ def handle_image(event):
         event.reply_token,
         flex_msg
     )
-    )
