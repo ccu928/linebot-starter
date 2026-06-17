@@ -416,8 +416,16 @@ def handle_image(event):
         "image"
     )
     quiz = generate_quiz(text)
-    quiz = quiz.replace("json","") 
-    quiz = quiz.replace("","")
+    quiz = quiz.replace(
+        "```json",
+        ""
+    )
+    
+    quiz = quiz.replace(
+        "```",
+        ""
+    )
+    
     quiz = quiz.strip()
     quiz_data = json.loads(quiz)
     flex_msg = create_quiz_flex(
