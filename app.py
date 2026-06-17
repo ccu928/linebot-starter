@@ -4,7 +4,6 @@ from datetime import timedelta
 import traceback
 import fitz
 from docx import Document
-from PIL import Image
 import pytesseract
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
@@ -94,19 +93,6 @@ def extract_text(filepath, file_type):
 
             for p in doc.paragraphs:
                 text += p.text + "\n"
-
-            return text
-
-
-        # 圖片OCR
-        elif file_type == "image":
-
-            img = Image.open(filepath)
-
-            text = pytesseract.image_to_string(
-                img,
-                lang="chi_tra+eng"
-            )
 
             return text
 
@@ -402,56 +388,6 @@ def handle_file(event):
         quiz_data["questions"]
     )
     
-    line_bot_api.reply_message(
-        event.reply_token,
-        flex_msg
-    )
-
-
-@handler.add(MessageEvent, message=ImageMessage)
-def handle_image(event):
-
-    file_id = event.message.id
-
-    content = line_bot_api.get_message_content(
-        file_id
-    )
-
-    filepath="image.jpg"
-
-
-    with open(filepath,"wb") as f:
-
-        for chunk in content.iter_content():
-
-            f.write(chunk)
-
-
-    text = extract_text(
-        filepath,
-        "image"
-    )
-
-
-    quiz = generate_quiz(text)
-    log_to_sheets(
-        text,
-        quiz
-    )
-
-    quiz = quiz.replace("```json","")
-    quiz = quiz.replace("```","")
-    quiz = quiz.strip()
-
-
-    quiz_data = json.loads(quiz)
-
-
-    flex_msg = create_quiz_flex(
-        quiz_data["questions"]
-    )
-
-
     line_bot_api.reply_message(
         event.reply_token,
         flex_msg
