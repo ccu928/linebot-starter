@@ -49,11 +49,9 @@ def log_to_sheets(user_msg, bot_reply):
         if not service:
             return
         now = (
-            datetime.datetime.utcnow()
+            datetime.utcnow()
             + timedelta(hours=8)
-        ).strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        ).strftime("%Y-%m-%d %H:%M:%S")
         values = [[now, user_msg, bot_reply]]
         service.spreadsheets().values().append(
             spreadsheetId=SPREADSHEET_ID,
@@ -199,6 +197,10 @@ def handle_message(event):
     try:
 
         quiz = generate_quiz(user_msg)
+        log_to_sheets(
+            user_msg,
+            quiz
+        )
 
         # 去掉 Gemini 可能加的 ```json
         quiz = quiz.replace("```json", "")
@@ -375,6 +377,10 @@ def handle_file(event):
     )
     
     quiz = generate_quiz(text)
+    log_to_sheets(
+        user_msg,
+        quiz
+    )
     
     quiz = quiz.replace(
         "```json",
@@ -428,7 +434,10 @@ def handle_image(event):
 
 
     quiz = generate_quiz(text)
-
+    log_to_sheets(
+        user_msg,
+        quiz
+    )
 
     quiz = quiz.replace("```json","")
     quiz = quiz.replace("```","")
