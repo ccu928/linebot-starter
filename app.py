@@ -198,7 +198,7 @@ def handle_message(event):
 
         quiz = generate_quiz(user_msg)
         log_to_sheets(
-            text,
+            user_msg,
             quiz
         )
 
@@ -378,7 +378,7 @@ def handle_file(event):
     
     quiz = generate_quiz(text)
     log_to_sheets(
-        text,
+        user_msg,
         quiz
     )
     
